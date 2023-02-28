@@ -1,0 +1,220 @@
+---
+title: "SHANGHAI"
+author: "shangqingzhu"
+date: "11/29/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+#install.packages("tmap")
+library(readr)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(wordcloud)
+library(data.table)
+library(grDevices)
+library(RColorBrewer)
+library(tm)
+library(caret)
+library(FNN)
+library(forecast)
+library(rpart)
+library(rpart.plot)
+library(textclean)
+library(leaflet)
+```
+
+
+1.missing value & data filter
+```{r}
+shanghai <- read.csv("listings.csv")
+huangpu<-
+anyNA(shanghai)
+is.na(shanghai)
+sum(is.na(shanghai))
+
+huangpu <- subset(shanghai, host_neighbourhood == 'Huangpu')
+
+```
+Remove NAS
+```{r}
+HP_remove_NA <- huangpu
+HP_remove_NA [HP_remove_NA == ""] <- NA
+HP_remove_NA
+```
+```{r}
+
+HP_remove_NA$price = as.numeric(gsub("[\\$,]","", HP_remove_NA$price))
+
+HP_remove_NA$host_response_rate = as.numeric(gsub("[\\%,]","",HP_remove_NA$host_response_rate))
+
+HP_remove_NA$host_acceptance_rate = as.numeric(gsub("[\\%,]","",HP_remove_NA$host_acceptance_rate))
+
+HP_remove_NA <- select(HP_remove_NA,-c(id,listing_url,scrape_id,name,picture_url,host_url,host_thumbnail_url,host_picture_url, listing_url,description, neighborhood_overview, host_id, host_url, host_name, host_location, host_about, host_neighbourhood, host_verifications, neighbourhood, neighbourhood_cleansed, amenities, host_thumbnail_url, host_picture_url, host_has_profile_pic, host_identity_verified, has_availability, first_review, last_review))
+
+
+huangpu_clean <-HP_remove_NA
+```
+
+3 Data Visulization
+```{r}
+
+p <- ggplot(huangpu_clean, aes(x = price)) + geom_histogram()
+p + xlim(10, 2000)
+
+p1 <- ggplot(huangpu_clean,aes(x = price, fill = room_type )) + geom_histogram()
+p1 + xlim(10,2000)
+
+options(scipen=999)
+p2 <- ggplot(huangpu_clean, aes(x = price, y = bedrooms , size = bathrooms_text)) + geom_point(alpha=0.1)
+p2+xlim(10,2000)
+```
+Mapping
+```{r}
+options(scipen = 999)
+mapdata <- map_data("world")
+
+
+```
+
+WORDCLOUD
+```{r}
+show_word <- huangpu_clean
+corpus <- iconv(show_word$neighborhood_overview)
+corpus <- Corpus(VectorSource(corpus))
+inspect(corpus[1:5])
+
+
+```
+Clean text
+```{r}
+tm_map(corpus, tolower)
+inspect(corpus[1:10])
+
+corpus <- tm_map(corpus, removePunctuation)
+inspect(corpus[1:10])
+
+corpus <- tm_map(corpus, removeNumbers)
+inspect(corpus[1:10])
+
+cleanset <- tm_map(corpus, removeWords, stopwords('english'))
+inspect(cleanset[1:10])
+
+cleanset <- tm_map(cleanset, stripWhitespace)
+inspect(cleanset[1:10])
+
+```
+
+Term document matrix
+```{r}
+tdm <- TermDocumentMatrix(cleanset)
+tdm
+
+tdm <- as.matrix(tdm)
+```
+
+wordcloud
+```{r}
+library(tidytext)
+w <- sort(rowSums(tdm), decreasing = TRUE)
+set.seed(222)
+wordcloud(words = names(w),
+          freq =w, 
+          max.words = 150,
+          random.color = F,
+          min.freq = 5,
+          colors = brewer.pal(8,"Dark2"),
+          scale = c(5,0.3),
+          rot.per = 0.7
+          )
+
+library(wordcloud2)
+w <- data.frame(names(w),w)
+colnames(w) <- c("word","freq")
+letterCloud(w,word = "s", size = 1)
+
+#no<-huangpu$neighborhood_overview 
+#no<-Corpus(VectorSource(no))
+#no<-unnest_tokens(no,word,text)
+#unlist(word,word) 
+#dplyr::count(word,sort= TRUE)
+#View(no)
+#w<-as.data.frame(w)
+#class(w)
+#w <- sort(rowSums(tdm), decreasing = TRUE)
+#wordcloud(words = names(no), freq = no,max.words = 50)
+
+```
+
+
+step II: Prediction
+```{r}
+
+```
+
+step III:Classification
+```{r}
+hp_classification<- huangpu_clean
+anyNA(hp_classification)
+set.seed(110)
+training <- slice_head(SH_classification, prop = 0.6)
+validing <- slice_tail(SH_classification, prop = 0.4)
+
+
+```
+
+Part II, Naive bayes.
+```{r}
+library(e1071)
+
+
+```
+
+Classification, Part III. Classification Tree
+```{r}
+set.seed(110)
+hp_classification_tree <- hp_classification
+training_ct <- slice_head(hp_classification_tree, prop = 0.6)
+validing_ct <- slice_tail(hp_classification_tree, prop = 0.4)
+
+model <- rpart(review_scores_rating~., method = "class", data = training_ct)
+```
+tree
+```{r}
+rpart.plot(model)
+rpart.plot(model, type = 2, extra =2, varlen = -5)
+```
+
+```{r}
+
+```
+```{r}
+
+```
+```{r}
+
+```
+```{r}
+
+```
+```{r}
+
+```
+```{r}
+
+```
+```{r}
+
+```
